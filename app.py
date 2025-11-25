@@ -76,11 +76,12 @@ FLOW_CARD_WITHDRAWAL = ["[SERVER CONTENTS]CARD_INDEX2", "[SERVER CONTENTS]CARD_M
 FLOW_EXCHANGE_FOREIGN_CREDIT = ["[SERVER CONTENTS]CARD_INDEX2", "[SERVER CONTENTS]CALCULATOR_CURRENCY", "[SERVER CONTENTS]SCAN_PASSPORT", "[SERVER CONTENTS]SELECT_SALE_GB", "[SERVER CONTENTS]SALE_ACC_PHONE", "[SERVER CONTENTS]SALE_ACC_CHECK", "[SERVER CONTENTS]SALE_ACC_OUTPUT_CURRENCY", "[SERVER CONTENTS]OUTPUT_THERMAL_CURRENCY", "[SERVER CONTENTS]NOTIFICATION"]
 
 # (자동 감지 지도)
+# (⭐수정됨: 카드 재발급 검증 키 변경⭐)
 TRANSACTION_MAP = {
-    "카드 발급 (현금)": (FLOW_CARD_CASH, "CASH", "C_SEL_CURRENCY"),
-    "카드 발급 (신용카드)": (FLOW_CARD_CREDIT, "CREDIT", "C_I_SELVOUCHER"),
-    "카드 재발급": (FLOW_CARD_REISSUE, "REISSUE", "C_R_AGREE"),
-    "카드 충전 (현금)": (FLOW_CHARGE_CASH, "CASH", "C_SEL_CURRENCY"),
+    "카드 발급 (현금)": (FLOW_CARD_CASH, "CASH", "C_I_INPUT"),
+    "카드 발급 (신용카드)": (FLOW_CARD_CREDIT, "CREDIT", "C_I_CREDIT"),
+    "카드 재발급": (FLOW_CARD_REISSUE, "REISSUE", "C_R_ACTIVATE"), # (변경: C_R_AGREE -> C_R_ACTIVATE)
+    "카드 충전 (현금)": (FLOW_CHARGE_CASH, "CASH", "C_T_INPUT"), 
     "카드 충전 (신용카드)": (FLOW_CHARGE_CREDIT, "CREDIT", "C_T_SEL_AMT"),
     "원화 환전": (FLOW_EXCHANGE_KRW, "EXCHANGE", "INPUT_CURRENCY"),
     "외화 환전 (현금)": (FLOW_EXCHANGE_FOREIGN, "EXCHANGE_FOREIGN", "INPUT_KRW"),
@@ -380,3 +381,4 @@ if search_btn:
                     st.download_button(label="💾 결과 엑셀(CSV) 다운로드", data=csv, file_name='search_result.csv', mime='text/csv')
             else:
                 st.warning(f"😥 '{keyword}' 정보가 포함된 로그를 찾지 못했습니다.")
+
