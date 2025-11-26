@@ -286,10 +286,10 @@ with st.sidebar:
     
     # 드래그 앤 드롭 업로더
     uploaded_files = st.file_uploader(
-        "분석할 로그 파일을 드래그하거나 선택하세요", 
-        accept_multiple_files=True, 
-        type=['txt', 'log']
-    )
+    "분석할 로그 파일을 드래그하거나 선택하세요", 
+    accept_multiple_files=True
+    # type 옵션 삭제됨 -> 모든 파일 업로드 가능
+)
     
     st.markdown("---")
     
