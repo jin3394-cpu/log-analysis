@@ -7,7 +7,7 @@ import pandas as pd
 # ==========================================
 # 0. 페이지 설정 및 CSS
 # ==========================================
-st.set_page_config(page_title="디지털 탐정 Web (Upload)", page_icon="🕵️‍♂️", layout="wide")
+st.set_page_config(page_title="디지털 탐정 Web (Mobile)", page_icon="🕵️‍♂️", layout="wide")
 
 st.markdown("""
 <style>
@@ -350,3 +350,4 @@ if search_btn:
                     st.download_button(label="💾 결과 엑셀(CSV) 다운로드", data=csv, file_name='search_result.csv', mime='text/csv')
             else:
                 st.warning(f"😥 업로드된 파일에서 '{keyword}' 관련 내용을 찾지 못했습니다.")
+
