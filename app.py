@@ -278,7 +278,7 @@ def analyze_flow_web_upload(files, target_keyword, flow_list, mode, validator_st
 # ==========================================
 # 3. 메인 UI
 # ==========================================
-st.title("🕵️‍♂️ 디지털 탐정 Web (Upload Ver.)")
+st.title("🕵️‍♂️ 디지털 탐정 Web (Mobile)")
 st.markdown("---")
 
 with st.sidebar:
@@ -350,4 +350,5 @@ if search_btn:
                     st.download_button(label="💾 결과 엑셀(CSV) 다운로드", data=csv, file_name='search_result.csv', mime='text/csv')
             else:
                 st.warning(f"😥 업로드된 파일에서 '{keyword}' 관련 내용을 찾지 못했습니다.")
+
 
