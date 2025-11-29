@@ -3,10 +3,7 @@ import os
 import re
 import time
 import threading
-import hashlib
-import tempfile
-import shutil
-import streamlit.components.v1 as components 
+import hashlib  # [추가] 중복 방지를 위한 해시 모듈
 from datetime import datetime, timedelta
 from collections import defaultdict
 from streamlit.runtime import get_instance
@@ -36,7 +33,7 @@ if "monitor_started" not in st.session_state:
 # ==========================================
 # 0. 페이지 설정 및 CSS
 # ==========================================
-st.set_page_config(page_title="NEURAL CORE", page_icon="💠", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="NEURAL CORE", page_icon="💠", layout="wide")
 
 st.markdown("""
 <style>
@@ -498,22 +495,15 @@ def draw_landing_page(folder_path):
         align-items: center;
     }
 
-    /* 중앙 빛나는 구체 - 커서 및 z-index 추가 */
+    /* 중앙 빛나는 구체 */
     .ai-core {
         width: 100px;
         height: 100px;
         background: radial-gradient(circle at 30% 30%, #a5d6ff, #0D47A1);
         border-radius: 50%;
         box-shadow: 0 0 40px #007bff, inset 0 0 20px #fff;
-        z-index: 100; /* 클릭 우선순위 높임 */
+        z-index: 10;
         animation: breathe 3s infinite ease-in-out;
-        cursor: pointer; /* 클릭 가능 표시 */
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    /* 클릭 효과 */
-    .ai-core:active {
-        transform: scale(0.9);
-        box-shadow: 0 0 10px #007bff;
     }
 
     /* 회전하는 바깥 링 1 */
@@ -525,7 +515,6 @@ def draw_landing_page(folder_path):
         border-top: 2px solid #58A6FF;
         border-radius: 50%;
         animation: spin 4s linear infinite;
-        pointer-events: none;
     }
 
     /* 회전하는 바깥 링 2 (반대 방향) */
@@ -536,7 +525,6 @@ def draw_landing_page(folder_path):
         border: 1px dashed rgba(88, 166, 255, 0.4);
         border-radius: 50%;
         animation: spin-reverse 7s linear infinite;
-        pointer-events: none;
     }
 
     /* 애니메이션 키프레임 */
@@ -619,7 +607,7 @@ def draw_landing_page(folder_path):
 <div class='core-container'>
 <div class='ring-1'></div>
 <div class='ring-2'></div>
-<div class='ai-core' id='ai-core-btn'></div>
+<div class='ai-core'></div>
 </div>
 <div class='system-msg'>
 <span class='blink'>_</span> {status_msg}
@@ -627,44 +615,7 @@ def draw_landing_page(folder_path):
 </div>
 """, unsafe_allow_html=True)
     
-    # [강력해진 JS] 전역 클릭 리스너 방식 (화면 갱신에도 클릭 유지)
-    js_code = """
-    <script>
-    (function() {
-        const doc = window.parent.document;
-        
-        // 기존에 등록된 리스너가 있다면 제거 (중복 방지)
-        if (window.toggleSidebarFunc) {
-            doc.removeEventListener('click', window.toggleSidebarFunc);
-        }
-
-        // 새 클릭 핸들러 정의
-        window.toggleSidebarFunc = function(e) {
-            // 클릭된 요소가 .ai-core 클래스를 가지고 있거나, 그 자식인지 확인
-            if (e.target.classList.contains('ai-core') || e.target.closest('.ai-core')) {
-                // 1. 닫혀있는 사이드바 열기 버튼 찾기 ( > 모양)
-                let toggleBtn = doc.querySelector('[data-testid="stSidebarCollapsedControl"]');
-                
-                // 2. 만약 없다면, 열려있는 사이드바 닫기 버튼 찾기 ( < 모양)
-                if (!toggleBtn) {
-                    toggleBtn = doc.querySelector('[data-testid="stSidebarExpandedControl"]');
-                }
-                
-                // 3. 버튼이 있으면 클릭
-                if (toggleBtn) {
-                    toggleBtn.click();
-                }
-            }
-        };
-
-        // 문서 전체에 클릭 리스너 부착 (Capture phase X, Bubble phase O)
-        doc.addEventListener('click', window.toggleSidebarFunc);
-    })();
-    </script>
-    """
-    components.html(js_code, height=0, width=0)
-
-    # 하단 HUD 통계
+    # 하단 HUD 통계 (PCT.py와 동일하게 3단 구성으로 변경)
     if stats['count'] > 0:
         c1, c2, c3 = st.columns(3)
         
@@ -697,6 +648,43 @@ def draw_landing_page(folder_path):
             
     else:
         st.error(f"❌ 폴더를 찾을 수 없습니다: {folder_path}")
+
+def search_simple_text(folder_path, keyword, start_date, end_date):
+    html_parts = []
+    found_any = False
+    s_date_str = start_date.strftime("%Y-%m-%d")
+    e_date_str = end_date.strftime("%Y-%m-%d")
+    keyword_no_space = "".join(keyword.split()).lower()
+    total_found_lines = 0 
+    
+    for foldername, subfolders, filenames in os.walk(folder_path):
+        for filename in filenames:
+            if not (filename.endswith(".txt") or filename.endswith(".log")): continue
+            date_match = RE_DATE.search(filename)
+            if date_match:
+                file_date = date_match.group(1)
+                if not (s_date_str <= file_date <= e_date_str): continue
+            
+            full_path = os.path.join(foldername, filename)
+            file_lines = read_log_file(full_path)
+            if not file_lines: continue
+            
+            found_lines_in_file = []
+            for idx, line in enumerate(file_lines):
+                if keyword_no_space in "".join(line.split()).lower():
+                    clean_line = line.strip().replace("<", "&lt;").replace(">", "&gt;") 
+                    highlighted_line = re.sub(f"({re.escape(keyword)})", r"<span class='pill pill-warn'>\1</span>", clean_line, flags=re.IGNORECASE)
+                    found_lines_in_file.append((idx + 1, highlighted_line, line.strip()))
+            
+            if found_lines_in_file:
+                found_any = True
+                total_found_lines += len(found_lines_in_file)
+                html_parts.append(f"""<div class='trans-card'><div class='card-header'><span class='highlight-cate'>📂 {filename}</span><span class='status-badge bg-warn'>{len(found_lines_in_file)} HITS</span></div>""")
+                for line_num, html_line, raw_line in found_lines_in_file:
+                    html_parts.append(f"<div class='step-row border-fail'><div class='log-text'>Line {line_num}: {html_line}</div></div>")
+                html_parts.append("</div>")
+
+    return found_any, "".join(html_parts), total_found_lines
 
 # [수정] 분석 로직 (중복 제거 강화 및 환전 파싱)
 def analyze_flow_web(folder_path, target_keyword, flow_list, mode, validator_step, start_date, end_date, category_name, anchor_map):
@@ -1086,28 +1074,19 @@ if "log_folder_path" not in st.session_state:
 with st.sidebar:
     st.markdown("<div class='sidebar-header'><span>SYSTEM_CONTROLLER</span><span>v2.2</span></div>", unsafe_allow_html=True)
     
-    st.markdown("<div class='control-label'><span class='label-accent'>01.</span> UPLOAD LOGS</div>", unsafe_allow_html=True)
-    uploaded_files = st.file_uploader("Upload", accept_multiple_files=True, type=['txt', 'log'], label_visibility="collapsed")
-    
-    if uploaded_files:
-        temp_dir = os.path.join(tempfile.gettempdir(), "neural_core_logs")
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
-        
-        # Save uploaded files
-        for uploaded_file in uploaded_files:
-            with open(os.path.join(temp_dir, uploaded_file.name), "wb") as f:
-                f.write(uploaded_file.getbuffer())
-        
-        st.session_state.log_folder_path = temp_dir
-    
+    st.markdown("<div class='control-label'><span class='label-accent'>01.</span> TARGET PATH</div>", unsafe_allow_html=True)
+    st.session_state.log_folder_path = st.text_input("Path", value=st.session_state.log_folder_path, label_visibility="collapsed")
     st.markdown("<div class='separator-line'></div>", unsafe_allow_html=True)
     
-    # [수정] 날짜 필터링 UI 제거 (내부적으로 전체 기간 설정)
-    start_date = datetime(2000, 1, 1)
-    end_date = datetime(2099, 12, 31)
+    today = datetime.now()
+    yesterday = today - timedelta(days=1)
+    
+    st.markdown("<div class='control-label'><span class='label-accent'>02.</span> TIME WINDOW</div>", unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1: start_date = st.date_input("Start", value=yesterday, label_visibility="collapsed")
+    with col2: end_date = st.date_input("End", value=today, label_visibility="collapsed")
 
-    st.markdown("<div class='control-label'><span class='label-accent'>02.</span> PROTOCOL</div>", unsafe_allow_html=True)
+    st.markdown("<div class='control-label'><span class='label-accent'>03.</span> PROTOCOL</div>", unsafe_allow_html=True)
     search_mode_ui = st.radio("Mode", ["DEEP_SCAN", "TEXT_FIND"], horizontal=True, label_visibility="collapsed", key="ui_mode_selection")
 
     search_mode = "단순 텍스트 검색" 
@@ -1116,16 +1095,16 @@ with st.sidebar:
 
     if search_mode_ui == "DEEP_SCAN":
         search_mode = "거래 정밀 분석"
-        st.markdown("<div class='control-label'><span class='label-accent'>03.</span> TYPE SELECTOR</div>", unsafe_allow_html=True)
+        st.markdown("<div class='control-label'><span class='label-accent'>04.</span> TYPE SELECTOR</div>", unsafe_allow_html=True)
         category_list = ["ALL_TYPES"] + list(TRANSACTION_MAP.keys())
         cat_selection = st.selectbox("Category", category_list, label_visibility="collapsed", key="sb_category")
         selected_category = "전체" if cat_selection == "ALL_TYPES" else cat_selection
-        st.markdown("<div class='control-label'><span class='label-accent'>04.</span> TARGET KEY</div>", unsafe_allow_html=True)
+        st.markdown("<div class='control-label'><span class='label-accent'>05.</span> TARGET KEY</div>", unsafe_allow_html=True)
         keyword = st.text_input("Keyword_Deep", value="", label_visibility="collapsed", placeholder="CARD / PASSPORT NO.", key="input_deep_keyword")
     else:
         search_mode = "단순 텍스트 검색"
         selected_category = "전체"
-        st.markdown("<div class='control-label'><span class='label-accent'>03.</span> QUERY STRING</div>", unsafe_allow_html=True)
+        st.markdown("<div class='control-label'><span class='label-accent'>04.</span> QUERY STRING</div>", unsafe_allow_html=True)
         keyword = st.text_input("Keyword_Simple", value="", label_visibility="collapsed", placeholder="SEARCH PATTERN...", key="input_simple_keyword")
 
     st.markdown("<div class='separator-line'></div>", unsafe_allow_html=True)
@@ -1168,7 +1147,7 @@ if search_btn:
                         if c_fail > 0: stats_fail[category_name] += c_fail
                 final_html = "".join(html_list)
             else:
-                
+                found_total, final_html, grand_total = search_simple_text(st.session_state.log_folder_path, keyword, start_date, end_date)
                 grand_success = grand_total; grand_fail = 0
                 if found_total: stats_total["Simple Search"] = grand_total
 
