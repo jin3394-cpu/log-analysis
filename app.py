@@ -631,7 +631,7 @@ def draw_landing_page(folder_path):
             status_msg = "⚠️ TARGET NOT FOUND - CHECK FILE TYPES (.txt/.log)"
         else:
             # 초기 상태 (파일 업로드 전)
-            status_msg = "⚠️ A WAITING LOG DATA - PLEASE UPLOAD FILES"
+            status_msg = "⚠️ WAITING LOG DATA - PLEASE UPLOAD FILES"
     # 📌 [수정된 부분 끝]
 
     # 메인 코어 UI
@@ -725,7 +725,7 @@ def draw_landing_page(folder_path):
         elif status_msg == "⚠️ TARGET NOT FOUND - CHECK FILE TYPES (.txt/.log)":
             st.warning(f"❌ 업로드 폴더에 분석 가능한 로그 파일이 없습니다. (대상 폴더: `{os.path.basename(folder_path)}`)")
         else:
-            st.error(f"❌ 폴더를 찾을 수 없습니다: {folder_path}")
+            st.error(f"PLEASE UPLOAD FILES")
 
 
 # [수정] 분석 로직 (중복 제거 강화 및 환전 파싱)
@@ -1230,6 +1230,7 @@ if search_btn:
 else:
     # 📌 [수정된 부분] 파일이 업로드되지 않은 초기 상태를 명확히 구분하여 랜딩 페이지 출력
     draw_landing_page(st.session_state.log_folder_path)
+
 
 
 
