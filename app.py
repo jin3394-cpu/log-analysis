@@ -2342,7 +2342,7 @@ if search_btn:
                         if c_fail > 0: stats_fail[category_name] += c_fail
                 final_html = "".join(html_list)
             else:
-                found_total, final_html, grand_total = search_simple_text(st.session_state.log_folder_path, keyword, start_date, end_date)
+                
                 grand_success = grand_total; grand_fail = 0
                 if found_total: stats_total["Simple Search"] = grand_total
 
@@ -2353,4 +2353,5 @@ if search_btn:
                 st.warning(f"😥 NO RECORDS FOUND FOR '{keyword}'")
 else:
     draw_landing_page(st.session_state.log_folder_path)
+
 
