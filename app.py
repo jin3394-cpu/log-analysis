@@ -631,7 +631,7 @@ def draw_landing_page(folder_path):
             status_msg = "⚠️ TARGET NOT FOUND - CHECK FILE TYPES (.txt/.log)"
         else:
             # 초기 상태 (파일 업로드 전)
-            status_msg = "⚠️ AWAITING LOG DATA - PLEASE UPLOAD FILES"
+            status_msg = "⚠️ WAITING LOG DATA - PLEASE UPLOAD FILES"
     # 📌 [수정된 부분 끝]
 
     # 메인 코어 UI
@@ -1230,6 +1230,7 @@ if search_btn:
 else:
     # 📌 [수정된 부분] 파일이 업로드되지 않은 초기 상태를 명확히 구분하여 랜딩 페이지 출력
     draw_landing_page(st.session_state.log_folder_path)
+
 
 
 
