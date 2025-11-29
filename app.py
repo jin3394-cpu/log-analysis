@@ -721,7 +721,7 @@ def draw_landing_page(folder_path):
     else:
         # 📌 [수정된 부분] 통계가 없을 경우 에러 대신 정보 메시지 출력
         if status_msg == "⚠️ AWAITING LOG DATA - PLEASE UPLOAD FILES":
-             st.info(f"⬆️ **로그 파일이 감지되지 않았습니다.** 사이드바에서 `.txt` 또는 `.log` 파일을 업로드해주세요.")
+             st.info(f"⬆️ **PLEASE UPLOAD FILES")
         elif status_msg == "⚠️ TARGET NOT FOUND - CHECK FILE TYPES (.txt/.log)":
             st.warning(f"❌ 업로드 폴더에 분석 가능한 로그 파일이 없습니다. (대상 폴더: `{os.path.basename(folder_path)}`)")
         else:
@@ -1230,5 +1230,6 @@ if search_btn:
 else:
     # 📌 [수정된 부분] 파일이 업로드되지 않은 초기 상태를 명확히 구분하여 랜딩 페이지 출력
     draw_landing_page(st.session_state.log_folder_path)
+
 
 
