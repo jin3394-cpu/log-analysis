@@ -672,7 +672,9 @@ def draw_landing_page(folder_path):
 """, unsafe_allow_html=True)
             
     else:
-        st.error(f"❌ 폴더를 찾을 수 없습니다: {folder_path}")
+        # st.error(f"❌ 폴더를 찾을 수 없습니다: {folder_path}") 
+        # 초기 실행 시 폴더가 없으므로 에러 메시지 대신 안내 메시지 출력
+        pass
 
 # [수정] 분석 로직 (중복 제거 강화 및 환전 파싱)
 def analyze_flow_web(folder_path, target_keyword, flow_list, mode, validator_step, start_date, end_date, category_name, anchor_map):
@@ -1066,14 +1068,19 @@ with st.sidebar:
     uploaded_files = st.file_uploader("Upload", accept_multiple_files=True, type=['txt', 'log'], label_visibility="collapsed")
     
     if uploaded_files:
-        temp_dir = os.path.join(tempfile.gettempdir(), "neural_core_logs")
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
+        # [수정] 충돌 방지를 위해 매번 새로운 임시 폴더 생성
+        if "temp_dir_path" not in st.session_state:
+            st.session_state.temp_dir_path = tempfile.mkdtemp()
+        
+        temp_dir = st.session_state.temp_dir_path
         
         # Save uploaded files
         for uploaded_file in uploaded_files:
-            with open(os.path.join(temp_dir, uploaded_file.name), "wb") as f:
-                f.write(uploaded_file.getbuffer())
+            file_path = os.path.join(temp_dir, uploaded_file.name)
+            # 중복 쓰기 방지
+            if not os.path.exists(file_path):
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
         
         st.session_state.log_folder_path = temp_dir
     
@@ -1111,47 +1118,52 @@ with st.sidebar:
 # ==========================================
 # 4. 메인 실행 로직
 # ==========================================
-if search_btn:
-    if not st.session_state.log_folder_path or not os.path.exists(st.session_state.log_folder_path):
-        st.error("❌ 로그 파일을 먼저 업로드해주세요.")
-    elif not keyword.strip():
-        st.warning("⚠️ 검색어를 입력해주세요!")
+# [수정] 안전한 실행을 위한 Try-Except 블록 추가
+try:
+    if search_btn:
+        if not st.session_state.log_folder_path or not os.path.exists(st.session_state.log_folder_path):
+            st.error("❌ 로그 파일을 먼저 업로드해주세요.")
+        elif not keyword.strip():
+            st.warning("⚠️ 검색어를 입력해주세요!")
+        else:
+            show_ai_loading_effect(keyword)
+            with st.spinner('GENERATING FINAL REPORT...'):
+                found_total = False; final_html = ""
+                grand_total = 0; grand_success = 0; grand_canceled = 0; grand_fail = 0
+                grand_success_details = []; grand_issue_details = []
+                stats_total = defaultdict(int); stats_success = defaultdict(int); stats_canceled = defaultdict(int); stats_fail = defaultdict(int)
+                anchor_map = {'total': set(), 'success': set(), 'canceled': set(), 'fail': set()}
+
+                if search_mode == "거래 정밀 분석":
+                    processed_keyword = "".join(keyword.split()).lower()
+                    target_configs = TRANSACTION_MAP.items() if selected_category == "전체" else [(selected_category, TRANSACTION_MAP[selected_category])]
+                    html_list = []
+                    for category_name, config in target_configs:
+                        flow_list, mode, validator = config
+                        found, html_res, c_tot, c_suc, c_canc, c_fail, s_list, i_list = analyze_flow_web(
+                            st.session_state.log_folder_path, processed_keyword, flow_list, mode, validator, start_date, end_date, category_name, anchor_map
+                        )
+                        if found:
+                            found_total = True; html_list.append(html_res)
+                            grand_total += c_tot; grand_success += c_suc; grand_canceled += c_canc; grand_fail += c_fail
+                            grand_success_details.extend(s_list); grand_issue_details.extend(i_list)
+                            stats_total[category_name] += c_tot
+                            if c_suc > 0: stats_success[category_name] += c_suc
+                            if c_canc > 0: stats_canceled[category_name] += c_canc
+                            if c_fail > 0: stats_fail[category_name] += c_fail
+                    final_html = "".join(html_list)
+                else:
+                    found_total, final_html, grand_total = search_simple_text(st.session_state.log_folder_path, keyword, start_date, end_date)
+                    grand_success = grand_total; grand_fail = 0
+                    if found_total: stats_total["Simple Search"] = grand_total
+
+                if found_total:
+                    draw_summary_ui(grand_total, grand_success, grand_canceled, grand_fail, grand_success_details, grand_issue_details, stats_total, stats_success, stats_canceled, stats_fail)
+                    st.markdown(final_html, unsafe_allow_html=True)
+                else:
+                    st.warning(f"😥 NO RECORDS FOUND FOR '{keyword}'")
     else:
-        show_ai_loading_effect(keyword)
-        with st.spinner('GENERATING FINAL REPORT...'):
-            found_total = False; final_html = ""
-            grand_total = 0; grand_success = 0; grand_canceled = 0; grand_fail = 0
-            grand_success_details = []; grand_issue_details = []
-            stats_total = defaultdict(int); stats_success = defaultdict(int); stats_canceled = defaultdict(int); stats_fail = defaultdict(int)
-            anchor_map = {'total': set(), 'success': set(), 'canceled': set(), 'fail': set()}
+        draw_landing_page(st.session_state.log_folder_path)
 
-            if search_mode == "거래 정밀 분석":
-                processed_keyword = "".join(keyword.split()).lower()
-                target_configs = TRANSACTION_MAP.items() if selected_category == "전체" else [(selected_category, TRANSACTION_MAP[selected_category])]
-                html_list = []
-                for category_name, config in target_configs:
-                    flow_list, mode, validator = config
-                    found, html_res, c_tot, c_suc, c_canc, c_fail, s_list, i_list = analyze_flow_web(
-                        st.session_state.log_folder_path, processed_keyword, flow_list, mode, validator, start_date, end_date, category_name, anchor_map
-                    )
-                    if found:
-                        found_total = True; html_list.append(html_res)
-                        grand_total += c_tot; grand_success += c_suc; grand_canceled += c_canc; grand_fail += c_fail
-                        grand_success_details.extend(s_list); grand_issue_details.extend(i_list)
-                        stats_total[category_name] += c_tot
-                        if c_suc > 0: stats_success[category_name] += c_suc
-                        if c_canc > 0: stats_canceled[category_name] += c_canc
-                        if c_fail > 0: stats_fail[category_name] += c_fail
-                final_html = "".join(html_list)
-            else:
-                found_total, final_html, grand_total = search_simple_text(st.session_state.log_folder_path, keyword, start_date, end_date)
-                grand_success = grand_total; grand_fail = 0
-                if found_total: stats_total["Simple Search"] = grand_total
-
-            if found_total:
-                draw_summary_ui(grand_total, grand_success, grand_canceled, grand_fail, grand_success_details, grand_issue_details, stats_total, stats_success, stats_canceled, stats_fail)
-                st.markdown(final_html, unsafe_allow_html=True)
-            else:
-                st.warning(f"😥 NO RECORDS FOUND FOR '{keyword}'")
-else:
-    draw_landing_page(st.session_state.log_folder_path)
+except Exception as e:
+    st.error(f"시스템 오류 발생: {e}")
