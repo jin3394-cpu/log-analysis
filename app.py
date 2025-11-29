@@ -340,7 +340,7 @@ def read_log_file(path):
         except: return []
 
 def get_folder_stats(folder_path):
-    if not os.path.exists(folder_path): return None
+    if not folder_path or not os.path.exists(folder_path): return None
     file_count = 0; total_size = 0; last_mod_time = 0
     for root, dirs, files in os.walk(folder_path):
         for file in files:
@@ -1057,7 +1057,7 @@ def analyze_flow_web(folder_path, target_keyword, flow_list, mode, validator_ste
 # 3. 메인 UI (사이드바)
 # ==========================================
 if "log_folder_path" not in st.session_state:
-    st.session_state.log_folder_path = r"C:\Users\jin33\OneDrive\바탕 화면\My_logs"
+    st.session_state.log_folder_path = None
 
 with st.sidebar:
     st.markdown("<div class='sidebar-header'><span>SYSTEM_CONTROLLER</span><span>v2.2</span></div>", unsafe_allow_html=True)
@@ -1112,8 +1112,8 @@ with st.sidebar:
 # 4. 메인 실행 로직
 # ==========================================
 if search_btn:
-    if not os.path.exists(st.session_state.log_folder_path):
-        st.error(f"❌ 폴더를 찾을 수 없습니다: {st.session_state.log_folder_path}")
+    if not st.session_state.log_folder_path or not os.path.exists(st.session_state.log_folder_path):
+        st.error("❌ 로그 파일을 먼저 업로드해주세요.")
     elif not keyword.strip():
         st.warning("⚠️ 검색어를 입력해주세요!")
     else:
